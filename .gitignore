@@ -1,0 +1,14 @@
+node_modules
+.next
+.turbo
+dist
+coverage
+.env
+.env.local
+pnpm-lock.yaml
+.worktrees
+.script-dist
+.test-dist
+uploads
+*.tsbuildinfo
+.DS_Store
