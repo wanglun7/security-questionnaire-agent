@@ -26,6 +26,17 @@ export function validateChunks(chunks: ChunkContract[]): ValidationIssueContract
         requiresHumanReview: true,
       });
     }
+
+    if (/ignore previous instructions|system prompt|忽略之前的指令/i.test(chunk.cleanText)) {
+      issues.push({
+        issueId: `${chunk.chunkId}-prompt-injection`,
+        chunkId: chunk.chunkId,
+        severity: 'high',
+        code: 'POSSIBLE_PROMPT_INJECTION',
+        message: 'Chunk may contain prompt injection content.',
+        requiresHumanReview: true,
+      });
+    }
   }
 
   return issues;
