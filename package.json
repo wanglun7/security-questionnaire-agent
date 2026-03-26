@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test:backend": "tsc -p tsconfig.test.json && node --test .test-dist/tests/backend/**/*.test.js",
-    "build:scripts": "tsc -p tsconfig.scripts.json"
+    "build:scripts": "tsc -p tsconfig.scripts.json",
+    "ingestion:smoke": "npm run build:scripts && node .script-dist/scripts/run-ingestion-smoke.js"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.0.0",
