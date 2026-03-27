@@ -17,6 +17,7 @@ import {
 } from '../../../lib/ingestion/services/parsers/xlsx';
 import { MemorySaver } from '@langchain/langgraph';
 import { createTestDecisionProvider } from './helpers/test-decision-provider';
+import { resolveRealCorpusPath } from './helpers/real-corpus-fixtures';
 
 const INGESTION_ID = '77777777-7777-4777-8777-777777777777';
 const DOCUMENT_ID = '88888888-8888-4888-8888-888888888888';
@@ -67,8 +68,7 @@ test('xlsx parser handles large worksheets without dropping populated rows', asy
   const startedAt = Date.now();
   const result = await parseXlsxDocument({
     documentId: DOCUMENT_ID,
-    sourceUri: path.join(
-      process.cwd(),
+    sourceUri: resolveRealCorpusPath(
       'tmp/test-kb-extracts/vtex-help-center-repo/docs/en/faq/channels/MercadoLivre_CategoriasFixas.xlsx'
     ),
   });
@@ -90,8 +90,7 @@ test('xlsx parser handles large worksheets without dropping populated rows', asy
 test('xlsx parser samples sections for very large row-heavy workbooks', async () => {
   const result = await parseXlsxDocument({
     documentId: DOCUMENT_ID,
-    sourceUri: path.join(
-      process.cwd(),
+    sourceUri: resolveRealCorpusPath(
       'tmp/test-kb-extracts/vtex-help-center-repo/docs/en/faq/channels/MercadoLivre_CategoriasFixas.xlsx'
     ),
   });
@@ -189,10 +188,7 @@ test('pdf parser emits clause_block sections for clause-heavy fixtures', async (
 test('pdf parser preserves headings and avoids faq blocks for handbook-style pdfs', async () => {
   const result = await parsePdfDocument({
     documentId: DOCUMENT_ID,
-    sourceUri: path.join(
-      process.cwd(),
-      'tmp/test-kb-extracts/hr-manual/hr-manual-master/pdf/manual.pdf'
-    ),
+    sourceUri: resolveRealCorpusPath('tmp/test-kb-extracts/hr-manual/hr-manual-master/pdf/manual.pdf'),
   });
 
   assert.ok(result.sections.some((section) => section.kind === 'heading'));
@@ -203,10 +199,7 @@ test('pdf parser preserves headings and avoids faq blocks for handbook-style pdf
 test('pdf parser keeps metadata lines as paragraph blocks when style matches body text', async () => {
   const result = await parsePdfDocument({
     documentId: DOCUMENT_ID,
-    sourceUri: path.join(
-      process.cwd(),
-      'tmp/test-kb-extracts/hr-manual/hr-manual-master/pdf/manual.pdf'
-    ),
+    sourceUri: resolveRealCorpusPath('tmp/test-kb-extracts/hr-manual/hr-manual-master/pdf/manual.pdf'),
   });
 
   const lastUpdated = result.sections.find((section) => /Last Updated: 2018-01-08/i.test(section.textRef));
@@ -218,10 +211,7 @@ test('pdf parser keeps metadata lines as paragraph blocks when style matches bod
 test('pdf parser keeps handbook headings close to source structure', async () => {
   const result = await parsePdfDocument({
     documentId: DOCUMENT_ID,
-    sourceUri: path.join(
-      process.cwd(),
-      'tmp/test-kb-extracts/hr-manual/hr-manual-master/pdf/manual.pdf'
-    ),
+    sourceUri: resolveRealCorpusPath('tmp/test-kb-extracts/hr-manual/hr-manual-master/pdf/manual.pdf'),
   });
 
   const headings = result.sections
@@ -237,8 +227,7 @@ test('pdf parser keeps handbook headings close to source structure', async () =>
 test('pdf parser drops exported help-center metadata boilerplate blocks', async () => {
   const result = await parsePdfDocument({
     documentId: DOCUMENT_ID,
-    sourceUri: path.join(
-      process.cwd(),
+    sourceUri: resolveRealCorpusPath(
       'tmp/test-kb-extracts/vtex-help-center-repo/docs/pt/tutorials/integrações/configurações-de-integrações/Tutorial_de_Aux_lio_ao_parceiro.pdf'
     ),
   });
@@ -252,15 +241,13 @@ test('pdf parser drops exported help-center metadata boilerplate blocks', async 
 
 test('pymupdf helper resolves script path independent of current cwd', async () => {
   const originalCwd = process.cwd();
+  const handbookPdfPath = resolveRealCorpusPath(
+    'tmp/test-kb-extracts/hr-manual/hr-manual-master/pdf/manual.pdf'
+  );
   process.chdir(path.resolve(originalCwd, '..', '..'));
 
   try {
-    const result = await extractPdfLayoutWithPyMuPdf(
-      path.join(
-        originalCwd,
-        'tmp/test-kb-extracts/hr-manual/hr-manual-master/pdf/manual.pdf'
-      )
-    );
+    const result = await extractPdfLayoutWithPyMuPdf(handbookPdfPath);
 
     assert.ok(result.blocks.length > 0);
     assert.ok(result.previewText.includes('Policy Manual'));
@@ -446,8 +433,7 @@ test('large xlsx strategy-check avoids materializing full section and task array
     ingestionId: '40404040-4040-4040-8040-404040404041',
     documentId: '50505050-5050-4050-8050-505050505051',
     executionMode: 'strategy_check',
-    sourceUri: path.join(
-      process.cwd(),
+    sourceUri: resolveRealCorpusPath(
       'tmp/test-kb-extracts/vtex-help-center-repo/docs/en/faq/channels/MercadoLivre_CategoriasFixas.xlsx'
     ),
     originalFilename: 'MercadoLivre_CategoriasFixas.xlsx',
@@ -606,10 +592,7 @@ test('handbook-style pdf stays on section strategy instead of misrouting to faq'
     ingestionId: '29292929-2929-4929-8929-292929292929',
     documentId: '30303030-3030-4030-8030-303030303030',
     executionMode: 'strategy_check',
-    sourceUri: path.join(
-      process.cwd(),
-      'tmp/test-kb-extracts/hr-manual/hr-manual-master/pdf/manual.pdf'
-    ),
+    sourceUri: resolveRealCorpusPath('tmp/test-kb-extracts/hr-manual/hr-manual-master/pdf/manual.pdf'),
     originalFilename: 'manual.pdf',
     mimeType: 'application/pdf',
     status: 'RECEIVED',

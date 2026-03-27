@@ -1,4 +1,5 @@
 import path from 'node:path';
+import fs from 'node:fs';
 
 export type RealCorpusExpectation = {
   id: string;
@@ -143,5 +144,25 @@ export const REAL_CORPUS_FIXTURES: RealCorpusExpectation[] = [
 ];
 
 export function resolveRealCorpusPath(relativePath: string) {
-  return path.join(process.cwd(), relativePath);
+  const cwd = process.cwd();
+  const direct = path.join(cwd, relativePath);
+  if (fs.existsSync(direct)) {
+    return direct;
+  }
+
+  const worktreesDir = path.join(cwd, '.worktrees');
+  if (fs.existsSync(worktreesDir)) {
+    for (const entry of fs.readdirSync(worktreesDir, { withFileTypes: true })) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
+
+      const candidate = path.join(worktreesDir, entry.name, relativePath);
+      if (fs.existsSync(candidate)) {
+        return candidate;
+      }
+    }
+  }
+
+  return direct;
 }
