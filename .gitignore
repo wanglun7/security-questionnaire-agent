@@ -9,6 +9,7 @@ pnpm-lock.yaml
 .worktrees
 .script-dist
 .test-dist
+tmp
 uploads
 *.tsbuildinfo
 .DS_Store
