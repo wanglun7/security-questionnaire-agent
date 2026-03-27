@@ -9,12 +9,35 @@ function buildEmbeddingText(cleanText: string, summary?: string) {
   return summary ? `${cleanText}\n\n${summary}` : cleanText;
 }
 
+async function mapWithConcurrency<T, R>(
+  values: T[],
+  concurrency: number,
+  mapper: (value: T, index: number) => Promise<R>
+) {
+  const results = new Array<R>(values.length);
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < values.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      results[currentIndex] = await mapper(values[currentIndex] as T, currentIndex);
+    }
+  }
+
+  const workerCount = Math.max(1, Math.min(concurrency, values.length));
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  return results;
+}
+
 export function createWriteVectorIndexNode({
   generateEmbeddingFn = generateEmbedding,
   storage = ingestionStorage,
+  embeddingConcurrency = Number(process.env.INGESTION_EMBEDDING_CONCURRENCY || 3),
 }: {
   generateEmbeddingFn?: (text: string) => Promise<number[]>;
   storage?: IngestionStorage;
+  embeddingConcurrency?: number;
 } = {}) {
   return async function writeVectorIndexNode(
     state: IngestionState
@@ -51,11 +74,13 @@ export function createWriteVectorIndexNode({
 
       return chunk;
     });
-    const embeddings = await Promise.all(
-      indexableChunks.map(async (chunk) => ({
+    const embeddings = await mapWithConcurrency(
+      indexableChunks,
+      embeddingConcurrency,
+      async (chunk) => ({
         chunkId: chunk.chunkId,
         embedding: await generateEmbeddingFn(buildEmbeddingText(chunk.cleanText, chunk.summary)),
-      }))
+      })
     );
 
     if (embeddings.length > 0) {

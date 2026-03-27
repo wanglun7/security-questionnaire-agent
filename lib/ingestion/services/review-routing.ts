@@ -15,11 +15,17 @@ export function buildReviewTaskFromValidationIssueDeterministic(
   input: ReviewTaskRoutingInput
 ): ReviewTaskContract {
   const { ingestionId, documentId, issue } = input;
+  const isMetadataIssue =
+    issue.code === 'LOW_METADATA_QUALITY' || issue.code === 'POSSIBLE_VERSION_CONFLICT';
   return {
     reviewTaskId: randomUUID(),
     ingestionId,
     documentId,
-    taskType: issue.chunkId ? 'chunk_review' : 'document_review',
+    taskType: isMetadataIssue
+      ? 'metadata_review'
+      : issue.chunkId
+        ? 'chunk_review'
+        : 'document_review',
     reasonCodes: [issue.code],
     targetDocumentId: documentId,
     targetChunkIds: issue.chunkId ? [issue.chunkId] : [],
@@ -27,7 +33,7 @@ export function buildReviewTaskFromValidationIssueDeterministic(
     scopeRefId: issue.chunkId ?? documentId,
     reasonCode: issue.code,
     summary: issue.message,
-    suggestedAction: 'approve',
+    suggestedAction: isMetadataIssue ? 'edit' : 'approve',
     status: 'pending',
   };
 }

@@ -102,6 +102,22 @@ export const knowledgeChunks = pgTable('knowledge_chunks', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+export const enrichmentCacheEntries = pgTable('enrichment_cache_entries', {
+  cacheKey: text('cache_key').primaryKey(),
+  chunkId: uuid('chunk_id').references(() => knowledgeChunks.id).notNull(),
+  tenantId: text('tenant_id').notNull(),
+  checksum: text('checksum').notNull(),
+  chunkStrategy: text('chunk_strategy').notNull(),
+  enrichLevel: text('enrich_level').notNull(),
+  promptVariant: text('prompt_variant').notNull(),
+  promptVersion: text('prompt_version').notNull(),
+  outputSchemaVersion: text('output_schema_version').notNull(),
+  modelId: text('model_id').notNull(),
+  outputJson: jsonb('output_json').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
 export const ingestionRuns = pgTable('ingestion_runs', {
   id: uuid('id').primaryKey().defaultRandom(),
   documentId: uuid('document_id').references(() => documents.id).notNull(),

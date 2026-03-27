@@ -18,9 +18,11 @@ test('chunk contract supports governance fields required by enterprise spec', ()
     checksum: 'checksum-1',
     aclTags: ['internal'],
     authorityLevel: 'medium',
+    authorityGuess: 'high',
   };
 
   assert.equal(chunk.indexStatus, 'pending');
   assert.equal(chunk.tenant, 'tenant-a');
   assert.deepEqual(chunk.aclTags, ['internal']);
+  assert.equal(chunk.authorityGuess, 'high');
 });

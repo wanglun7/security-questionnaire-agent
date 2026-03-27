@@ -620,3 +620,117 @@ test('handbook-style pdf stays on section strategy instead of misrouting to faq'
   assert.equal(result.chunkStrategyReason, 'fallback_to_section');
   assert.ok(result.chunks?.length);
 });
+
+test('partial enrich failures keep the run healthy and surface enrich metrics in traces and final report', async () => {
+  const traces: Array<{ nodeName: string; outputSummary?: Record<string, unknown> }> = [];
+  const runResults: Array<{ status: string; metrics?: Record<string, unknown> }> = [];
+  let enrichCalls = 0;
+  const sections = Array.from({ length: 10 }, (_, index) => [
+    {
+      sectionId: `section-heading-${index + 1}`,
+      documentId: DOCUMENT_ID,
+      kind: 'heading' as const,
+      level: 2,
+      textRef: `Policy Topic ${index + 1}`,
+      span: { paragraphStart: index * 2 + 1, paragraphEnd: index * 2 + 1 },
+    },
+    {
+      sectionId: `section-body-${index + 1}`,
+      documentId: DOCUMENT_ID,
+      kind: 'paragraph_block' as const,
+      textRef:
+        `This section explains enterprise ingestion control ${index + 1}, including review routing, validation, retention, and operator actions. ` +
+        'It is intentionally long enough to force section-level enrichment instead of title-only skipping.',
+      span: { paragraphStart: index * 2 + 2, paragraphEnd: index * 2 + 2 },
+    },
+  ]).flat();
+
+  const graph = await createIngestionGraph({
+    checkpointer: false,
+    storage: {
+      async saveDraftArtifacts() {},
+      async saveChunkEmbeddings() {},
+      async publishIndexedChunks() {},
+      async saveStepTrace(trace) {
+        traces.push({
+          nodeName: trace.nodeName,
+          outputSummary: trace.outputSummary as Record<string, unknown> | undefined,
+        });
+      },
+      async saveIngestionRunResult(result) {
+        runResults.push({
+          status: result.status,
+          metrics: result.metrics as Record<string, unknown> | undefined,
+        });
+      },
+      async ensureIngestionRun() {},
+      async resolveReviewTasks() {},
+    },
+    generateEmbeddingFn: async () => [0.1, 0.2, 0.3],
+    decisionProvider: {
+      classifyDocument: async () => ({
+        docType: 'policy',
+        initialChunkingHypothesis: 'section',
+        priorityFeatures: ['policy_manual'],
+      }),
+      chooseChunkStrategy: async () => ({
+        chunkingStrategy: 'section',
+        confidence: 'high',
+        reason: 'fallback_to_section',
+        fallbackStrategy: 'section',
+      }),
+      enrichChunk: async (chunk) => {
+        enrichCalls += 1;
+        if (enrichCalls === 3 || enrichCalls === 7) {
+          throw new Error('synthetic enrich failure');
+        }
+
+        return {
+          title: chunk.cleanText.slice(0, 60),
+          summary: chunk.cleanText,
+          keywords: ['policy', 'ingestion'],
+          entities: [],
+          questionsAnswered: [],
+          authorityGuess: 'medium',
+          reviewHints: [],
+        };
+      },
+      routeReviewTask: async (input) => ({
+        taskType: input.issue.chunkId ? 'chunk_review' : 'document_review',
+        reasonCodes: [input.issue.code],
+        summary: input.issue.message,
+        suggestedAction: 'approve',
+      }),
+    },
+  });
+
+  const result = await graph.invoke({
+    ingestionId: '42424242-4242-4242-8242-424242424242',
+    documentId: DOCUMENT_ID,
+    sourceUri: '/tmp/partial-enrich.html',
+    originalFilename: 'partial-enrich.html',
+    mimeType: 'text/html',
+    status: 'RECEIVED',
+      document: {
+        documentId: DOCUMENT_ID,
+        sourceUri: '/tmp/partial-enrich.html',
+        mimeType: 'text/html',
+        sectionCount: sections.length,
+    },
+    sections,
+  } as any);
+
+  assert.equal(enrichCalls, 10);
+  assert.equal(result.status, 'INDEXED');
+  assert.equal(result.metrics?.enrichFailedChunks, 2);
+  assert.equal(result.metrics?.indexedChunks, 10);
+  assert.deepEqual(result.metrics?.effectiveEnrichLevelCounts, { L2: 10 });
+
+  const aggregateTrace = traces.find((trace) => trace.nodeName === 'aggregate_enrichment');
+  assert.equal(aggregateTrace?.outputSummary?.enrichFailedChunks, 2);
+  assert.equal(aggregateTrace?.outputSummary?.enrichLlmChunks, 10);
+
+  assert.equal(runResults[0]?.status, 'INDEXED');
+  assert.equal(runResults[0]?.metrics?.enrichFailedChunks, 2);
+  assert.equal(runResults[0]?.metrics?.indexedChunks, 10);
+});

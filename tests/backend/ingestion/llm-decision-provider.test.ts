@@ -5,6 +5,7 @@ import {
   buildChunkStrategyPrompt,
   buildDocumentClassificationFeatures,
   buildDocumentClassificationPrompt,
+  repairChunkEnrichmentDecision,
   repairDocumentClassificationDecision,
 } from '../../../lib/ingestion/services/llm-decision-provider';
 
@@ -184,4 +185,42 @@ test('chunk strategy prompt explicitly defines strategy units and structural tie
   assert.match(prompt, /docType informs but does not override observed structure/i);
   assert.match(prompt, /if clause blocks or legal provisions dominate.*choose clause/i);
   assert.match(prompt, /if row\/table blocks dominate.*choose row even when docType is contract/i);
+});
+
+test('enrichment repair clamps overlong fields back into the structured schema contract', () => {
+  const repaired = repairChunkEnrichmentDecision(
+    {
+      title: 'T'.repeat(180),
+      summary: 'S'.repeat(400),
+      keywords: Array.from({ length: 12 }, (_, index) => `keyword-${index}`),
+      entities: Array.from({ length: 10 }, (_, index) => `entity-${index}`),
+      questionsAnswered: Array.from({ length: 9 }, (_, index) => `question-${index}`),
+      versionGuess: 'V'.repeat(90),
+      authorityGuess: 'medium',
+      reviewHints: Array.from({ length: 9 }, (_, index) => `hint-${index}`),
+    },
+    {
+      chunkId: 'chunk-1',
+      documentId: 'doc-1',
+      tenant: 'tenant-a',
+      rawTextRef: 'blob://chunk-1',
+      cleanText:
+        'Employees must submit leave requests through the HR system at least two weeks before the requested start date.',
+      aclTags: [],
+      checksum: 'checksum-1',
+      reviewStatus: 'pending',
+      indexStatus: 'pending',
+      chunkStrategy: 'section',
+      span: { paragraphStart: 1, paragraphEnd: 1 },
+      metadataVersion: 1,
+    }
+  );
+
+  assert.equal(repaired.title?.length, 120);
+  assert.equal(repaired.summary?.length, 240);
+  assert.equal(repaired.keywords?.length, 8);
+  assert.equal(repaired.entities?.length, 8);
+  assert.equal(repaired.questionsAnswered?.length, 6);
+  assert.equal(repaired.versionGuess?.length, 60);
+  assert.equal(repaired.reviewHints?.length, 6);
 });

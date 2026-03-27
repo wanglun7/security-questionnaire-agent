@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildReviewTaskFromValidationIssue } from '../../../lib/ingestion/services/review-routing';
+import {
+  buildReviewTaskFromValidationIssue,
+  buildReviewTaskFromValidationIssueDeterministic,
+} from '../../../lib/ingestion/services/review-routing';
 
 test('review routing requires an LLM provider', async () => {
   await assert.rejects(
@@ -94,4 +97,23 @@ test('review routing surfaces provider failures instead of falling back', async 
     ),
     /review llm failed/i
   );
+});
+
+test('deterministic review routing maps metadata issues to metadata_review tasks', () => {
+  const task = buildReviewTaskFromValidationIssueDeterministic({
+    ingestionId: 'ingestion-rr-3',
+    documentId: 'document-rr-3',
+    issue: {
+      issueId: 'issue-3',
+      chunkId: 'chunk-rr-3',
+      severity: 'medium',
+      validationTier: 'soft_warning',
+      code: 'LOW_METADATA_QUALITY',
+      message: 'Chunk metadata quality is lower than the preferred baseline.',
+      requiresHumanReview: true,
+    },
+  });
+
+  assert.equal(task.taskType, 'metadata_review');
+  assert.equal(task.suggestedAction, 'edit');
 });

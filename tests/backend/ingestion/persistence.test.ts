@@ -285,3 +285,51 @@ test('writeVectorIndexNode generates embeddings and writes only indexable chunks
   assert.equal(result.chunks?.[0]?.indexStatus, 'indexed');
   assert.equal(result.chunks?.[1]?.indexStatus, 'pending');
 });
+
+test('writeVectorIndexNode bounds embedding concurrency instead of firing all requests at once', async () => {
+  let inFlight = 0;
+  let maxInFlight = 0;
+
+  const node = createWriteVectorIndexNode({
+    generateEmbeddingFn: async () => {
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      inFlight -= 1;
+      return [0.1, 0.2, 0.3];
+    },
+    storage: {
+      saveDraftArtifacts: async () => {
+        throw new Error('not used');
+      },
+      saveChunkEmbeddings: async () => {},
+      publishIndexedChunks: async () => {},
+    },
+  });
+
+  await node({
+    ingestionId: INGESTION_ID,
+    documentId: DOCUMENT_ID,
+    sourceUri: '/tmp/a.xlsx',
+    originalFilename: 'a.xlsx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    status: 'VALIDATED',
+    chunks: Array.from({ length: 6 }, (_, index) => ({
+      chunkId: `${index + 1}`.repeat(8).slice(0, 8) + '-1111-4111-8111-111111111111',
+      documentId: DOCUMENT_ID,
+      tenant: 'tenant-default',
+      rawTextRef: `raw-${index}`,
+      cleanText: `Chunk ${index} text`,
+      summary: `Chunk ${index} summary`,
+      aclTags: [],
+      checksum: `checksum-${index}`,
+      reviewStatus: 'approved' as const,
+      indexStatus: 'pending' as const,
+      chunkStrategy: 'section' as const,
+      span: { paragraphStart: index + 1, paragraphEnd: index + 1 },
+      metadataVersion: 1,
+    })),
+  });
+
+  assert.ok(maxInFlight <= 3);
+});

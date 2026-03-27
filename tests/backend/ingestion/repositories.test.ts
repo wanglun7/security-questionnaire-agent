@@ -7,6 +7,7 @@ test('ingestion schema exports core knowledge tables', () => {
   assert.ok(schema.documents);
   assert.ok(schema.documentSections);
   assert.ok(schema.knowledgeChunks);
+  assert.ok(schema.enrichmentCacheEntries);
   assert.ok(schema.ingestionRuns);
   assert.ok(schema.ingestionStepTraces);
   assert.ok(schema.reviewTasks);
@@ -31,4 +32,11 @@ test('review tasks schema exposes lifecycle columns', () => {
 test('ingestion runs schema supports partial indexing status bookkeeping', () => {
   assert.ok(schema.ingestionRuns.status);
   assert.ok(schema.ingestionRuns.metricsJson);
+});
+
+test('enrichment cache schema exposes versioned cache key columns', () => {
+  assert.ok(schema.enrichmentCacheEntries.cacheKey);
+  assert.ok(schema.enrichmentCacheEntries.promptVersion);
+  assert.ok(schema.enrichmentCacheEntries.outputSchemaVersion);
+  assert.ok(schema.enrichmentCacheEntries.modelId);
 });

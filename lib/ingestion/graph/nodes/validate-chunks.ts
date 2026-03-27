@@ -1,4 +1,5 @@
 import { buildReviewTaskFromValidationIssue } from '../../services/review-routing';
+import { validateEnrichmentMetadata } from '../../services/enrichment-validation';
 import { validateChunks } from '../../services/validation';
 import type { IngestionDecisionProvider } from '../../services/llm-decision-provider';
 
@@ -10,13 +11,19 @@ export function createValidateChunksNode(
   return async function validateChunksNode(
     state: IngestionState
   ): Promise<Partial<IngestionState>> {
-    const validationIssues = validateChunks(state.chunks ?? []);
+    const validationIssues = [
+      ...validateChunks(state.chunks ?? []),
+      ...validateEnrichmentMetadata(state.chunks ?? [], {
+        executionMode: state.executionMode,
+        runDefaultEnrichLevel: state.metrics?.runDefaultEnrichLevel,
+      }),
+    ];
     const chunksById = new Map((state.chunks ?? []).map((chunk) => [chunk.chunkId, chunk]));
-  const issuesByChunkId = new Set(
-    validationIssues
-      .filter((issue) => issue.chunkId && issue.requiresHumanReview)
-      .map((issue) => issue.chunkId as string)
-  );
+    const issuesByChunkId = new Set(
+      validationIssues
+        .filter((issue) => issue.chunkId && issue.requiresHumanReview)
+        .map((issue) => issue.chunkId as string)
+    );
     const reviewTasks = await Promise.all(
       validationIssues
         .filter((issue) => issue.requiresHumanReview)

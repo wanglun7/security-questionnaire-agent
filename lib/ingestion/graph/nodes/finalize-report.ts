@@ -34,16 +34,26 @@ export function createFinalizeReportNode(storage: IngestionStorage = ingestionSt
             : rejectedCount === totalChunks && totalChunks > 0
               ? 'REJECTED'
               : 'FAILED';
+    const finalMetrics = {
+      ...state.metrics,
+      totalChunks,
+      approvedChunks: isRowBatchMode
+        ? state.metrics?.approvedChunks ?? 0
+        : chunks.filter((chunk) => chunk.reviewStatus === 'approved').length,
+      rejectedChunks: rejectedCount,
+      indexedChunks: indexedCount,
+    };
 
     await storage.saveIngestionRunResult?.({
       ingestionId: state.ingestionId,
       status,
-      metrics: state.metrics,
+      metrics: finalMetrics,
       error: state.error,
     });
 
     return {
       status,
+      metrics: finalMetrics,
     };
   };
 }

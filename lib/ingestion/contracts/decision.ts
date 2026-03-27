@@ -37,13 +37,13 @@ export type DocumentClassificationDecisionContract = {
 };
 
 export type ChunkEnrichmentDecisionContract = {
-  title: string;
-  summary: string;
-  keywords: string[];
+  title?: string;
+  summary?: string;
+  keywords?: string[];
   entities?: string[];
   questionsAnswered?: string[];
   versionGuess?: string;
-  authorityLevel?: ChunkAuthorityLevel;
+  authorityGuess?: ChunkAuthorityLevel;
   reviewHints?: string[];
 };
 

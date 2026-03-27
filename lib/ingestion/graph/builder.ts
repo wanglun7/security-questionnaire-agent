@@ -84,6 +84,15 @@ function summarizeStateSnapshot(state: Partial<IngestionState>) {
     chunkCount: state.chunks?.length ?? 0,
     reviewTaskCount: state.reviewTasks?.length ?? 0,
     validationIssueCount: state.validationIssues?.length ?? 0,
+    runDefaultEnrichLevel: state.metrics?.runDefaultEnrichLevel,
+    effectiveEnrichLevelCounts: state.metrics?.effectiveEnrichLevelCounts,
+    enrichEligibleChunks: state.metrics?.enrichEligibleChunks ?? 0,
+    enrichSkippedChunks: state.metrics?.enrichSkippedChunks ?? 0,
+    enrichLlmChunks: state.metrics?.enrichLlmChunks ?? 0,
+    enrichCacheHits: state.metrics?.enrichCacheHits ?? 0,
+    enrichCacheMisses: state.metrics?.enrichCacheMisses ?? 0,
+    enrichRetriedChunks: state.metrics?.enrichRetriedChunks ?? 0,
+    enrichFailedChunks: state.metrics?.enrichFailedChunks ?? 0,
   };
 }
 

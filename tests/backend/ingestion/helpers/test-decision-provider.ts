@@ -177,7 +177,7 @@ function enrichChunk(chunk: ChunkContract) {
     keywords: keywords.length > 0 ? keywords : ['knowledge'],
     entities: [],
     questionsAnswered: /[?？]/.test(firstLine) ? [firstLine] : [],
-    authorityLevel: chunk.authorityLevel ?? chunk.authorityGuess ?? 'medium',
+    authorityGuess: chunk.authorityGuess ?? chunk.authorityLevel ?? 'medium',
     reviewHints: [],
   };
 }

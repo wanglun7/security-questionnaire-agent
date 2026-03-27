@@ -1,5 +1,6 @@
 import type { ChunkContract } from '../contracts/chunk';
 import type { DocumentContract } from '../contracts/document';
+import type { EnrichmentCacheEntry } from '../contracts/enrichment';
 import type { ReviewTaskContract } from '../contracts/review';
 import type { SectionContract } from '../contracts/section';
 import type { StepTraceContract } from '../contracts/trace';
@@ -60,4 +61,6 @@ export type IngestionStorage = {
   resolveReviewTasks?(records: ReviewTaskResolutionRecord[]): Promise<void>;
   saveIngestionRunResult?(record: IngestionRunResultRecord): Promise<void>;
   ensureIngestionRun?(record: EnsureIngestionRunRecord): Promise<void>;
+  getEnrichmentCacheEntry?(cacheKey: string): Promise<EnrichmentCacheEntry | null>;
+  saveEnrichmentCacheEntry?(entry: EnrichmentCacheEntry): Promise<void>;
 };

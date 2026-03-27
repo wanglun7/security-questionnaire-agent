@@ -17,6 +17,10 @@ import {
   countQuestionLikeSections,
   extractPreviewSnippets,
 } from './section-normalization';
+import {
+  buildEnrichmentPrompt,
+  resolveDefaultEnrichmentPromptVariant,
+} from './enrichment-prompts';
 
 export type DocumentClassificationFeatureSummary = {
   sectionKindCounts: Record<string, number>;
@@ -85,7 +89,7 @@ const enrichmentSchema = z.object({
   entities: z.array(z.string()).max(8).default([]),
   questionsAnswered: z.array(z.string()).max(6).default([]),
   versionGuess: z.string().max(60).optional(),
-  authorityLevel: z.enum(['low', 'medium', 'high']).optional(),
+  authorityGuess: z.enum(['low', 'medium', 'high']).optional(),
   reviewHints: z.array(z.string()).max(6).default([]),
 });
 
@@ -97,6 +101,14 @@ const reviewRoutingSchema = z.object({
   assignee: z.string().max(120).optional(),
   owner: z.string().max(120).optional(),
 });
+
+const ENRICHMENT_TITLE_MAX_LENGTH = 120;
+const ENRICHMENT_SUMMARY_MAX_LENGTH = 240;
+const ENRICHMENT_KEYWORDS_MAX_ITEMS = 8;
+const ENRICHMENT_ENTITIES_MAX_ITEMS = 8;
+const ENRICHMENT_QUESTIONS_MAX_ITEMS = 6;
+const ENRICHMENT_VERSION_GUESS_MAX_LENGTH = 60;
+const ENRICHMENT_REVIEW_HINTS_MAX_ITEMS = 6;
 
 function getModel() {
   return openai(modelName);
@@ -261,6 +273,12 @@ function normalizeStringArray(value: unknown, maxItems: number) {
     .slice(0, maxItems);
 }
 
+function clampString(value: unknown, maxLength: number) {
+  return String(value ?? '')
+    .trim()
+    .slice(0, maxLength);
+}
+
 export function buildDocumentClassificationFeatures(
   input: DocumentClassificationInput
 ): DocumentClassificationFeatureSummary {
@@ -418,6 +436,36 @@ export function repairDocumentClassificationDecision(
               : docType === 'product_doc'
                 ? ['reference']
                 : ['sections'],
+  };
+}
+
+export function repairChunkEnrichmentDecision(
+  value: unknown,
+  chunk: ChunkContract
+): ChunkEnrichmentDecisionContract {
+  const candidate = (value ?? {}) as Record<string, unknown>;
+  const fallbackTitle = chunk.cleanText.slice(0, 60);
+  const fallbackSummary = chunk.cleanText.slice(0, 160);
+
+  return {
+    title: clampString(candidate.title ?? fallbackTitle, ENRICHMENT_TITLE_MAX_LENGTH),
+    summary: clampString(candidate.summary ?? fallbackSummary, ENRICHMENT_SUMMARY_MAX_LENGTH),
+    keywords: normalizeStringArray(candidate.keywords, ENRICHMENT_KEYWORDS_MAX_ITEMS),
+    entities: normalizeStringArray(candidate.entities, ENRICHMENT_ENTITIES_MAX_ITEMS),
+    questionsAnswered: normalizeStringArray(
+      candidate.questionsAnswered,
+      ENRICHMENT_QUESTIONS_MAX_ITEMS
+    ),
+    versionGuess: candidate.versionGuess
+      ? clampString(candidate.versionGuess, ENRICHMENT_VERSION_GUESS_MAX_LENGTH)
+      : undefined,
+    authorityGuess:
+      candidate.authorityGuess === 'low' ||
+      candidate.authorityGuess === 'medium' ||
+      candidate.authorityGuess === 'high'
+        ? candidate.authorityGuess
+        : undefined,
+    reviewHints: normalizeStringArray(candidate.reviewHints, ENRICHMENT_REVIEW_HINTS_MAX_ITEMS),
   };
 }
 
@@ -586,32 +634,18 @@ export function createGptStructuredDecisionProvider(): IngestionDecisionProvider
       });
     },
     async enrichChunk(chunk) {
+      const prompt = buildEnrichmentPrompt({
+        promptVariant: resolveDefaultEnrichmentPromptVariant(chunk.chunkStrategy),
+        chunk,
+      });
+      if (!prompt) {
+        throw new Error('LLM enrichment prompt is not available for row_rule chunks');
+      }
+
       return generateStructuredDecision({
         schema: enrichmentSchema,
-        prompt: [
-          'You are enriching a chunk for an enterprise knowledge ingestion workflow.',
-          'Return a JSON object with exactly these keys: title, summary, keywords, entities, questionsAnswered, versionGuess, authorityLevel, reviewHints.',
-          `chunkStrategy: ${chunk.chunkStrategy}`,
-          `cleanText: ${chunk.cleanText.slice(0, 2000)}`,
-        ].join('\n'),
-        repair: (value) => {
-          const candidate = (value ?? {}) as Record<string, unknown>;
-          return {
-            title: String(candidate.title ?? chunk.cleanText.slice(0, 60)),
-            summary: String(candidate.summary ?? chunk.cleanText.slice(0, 160)),
-            keywords: normalizeStringArray(candidate.keywords, 8),
-            entities: normalizeStringArray(candidate.entities, 8),
-            questionsAnswered: normalizeStringArray(candidate.questionsAnswered, 6),
-            versionGuess: candidate.versionGuess ? String(candidate.versionGuess) : undefined,
-            authorityLevel:
-              candidate.authorityLevel === 'low' ||
-              candidate.authorityLevel === 'medium' ||
-              candidate.authorityLevel === 'high'
-                ? candidate.authorityLevel
-                : undefined,
-            reviewHints: normalizeStringArray(candidate.reviewHints, 6),
-          };
-        },
+        prompt,
+        repair: (value) => repairChunkEnrichmentDecision(value, chunk),
       });
     },
     async routeReviewTask(input) {

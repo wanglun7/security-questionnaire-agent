@@ -8,9 +8,37 @@ export type RealCorpusExpectation = {
   expectedParserStrategy: 'pdf' | 'docx' | 'xlsx' | 'html';
   expectedDocType: 'faq' | 'policy' | 'contract' | 'questionnaire' | 'product_doc';
   expectedChunkingStrategy: 'section' | 'faq' | 'clause' | 'row';
+  expectedEnrichLevel: 'L0' | 'L1' | 'L2' | 'L3';
+  expectedPromptVariant:
+    | 'section_l1'
+    | 'section_l2'
+    | 'section_l3'
+    | 'faq_l1'
+    | 'faq_l2'
+    | 'faq_l3'
+    | 'clause_l1'
+    | 'clause_l2'
+    | 'clause_l3'
+    | 'row_rule'
+    | 'row_l1'
+    | 'row_l2'
+    | 'row_l3';
+  expectedShouldCallLlm: boolean;
 };
 
 export const REAL_CORPUS_FIXTURES: RealCorpusExpectation[] = [
+  {
+    id: 'faq-html-sample',
+    sourceRelativePath: 'tests/fixtures/ingestion-spec-samples/faq-sample.html',
+    originalFilename: 'faq-sample.html',
+    mimeType: 'text/html',
+    expectedParserStrategy: 'html',
+    expectedDocType: 'faq',
+    expectedChunkingStrategy: 'faq',
+    expectedEnrichLevel: 'L2',
+    expectedPromptVariant: 'faq_l2',
+    expectedShouldCallLlm: true,
+  },
   {
     id: 'hr-manual-docx',
     sourceRelativePath: 'tmp/test-kb-extracts/hr-manual/hr-manual-master/docx/manual.docx',
@@ -19,6 +47,9 @@ export const REAL_CORPUS_FIXTURES: RealCorpusExpectation[] = [
     expectedParserStrategy: 'docx',
     expectedDocType: 'policy',
     expectedChunkingStrategy: 'section',
+    expectedEnrichLevel: 'L2',
+    expectedPromptVariant: 'section_l2',
+    expectedShouldCallLlm: true,
   },
   {
     id: 'hr-manual-html',
@@ -28,6 +59,9 @@ export const REAL_CORPUS_FIXTURES: RealCorpusExpectation[] = [
     expectedParserStrategy: 'html',
     expectedDocType: 'policy',
     expectedChunkingStrategy: 'section',
+    expectedEnrichLevel: 'L2',
+    expectedPromptVariant: 'section_l2',
+    expectedShouldCallLlm: true,
   },
   {
     id: 'hr-manual-pdf',
@@ -37,6 +71,9 @@ export const REAL_CORPUS_FIXTURES: RealCorpusExpectation[] = [
     expectedParserStrategy: 'pdf',
     expectedDocType: 'policy',
     expectedChunkingStrategy: 'section',
+    expectedEnrichLevel: 'L2',
+    expectedPromptVariant: 'section_l2',
+    expectedShouldCallLlm: true,
   },
   {
     id: 'vtex-category-xlsx',
@@ -47,6 +84,9 @@ export const REAL_CORPUS_FIXTURES: RealCorpusExpectation[] = [
     expectedParserStrategy: 'xlsx',
     expectedDocType: 'product_doc',
     expectedChunkingStrategy: 'row',
+    expectedEnrichLevel: 'L0',
+    expectedPromptVariant: 'row_rule',
+    expectedShouldCallLlm: false,
   },
   {
     id: 'vtex-checklist-xlsx',
@@ -57,6 +97,9 @@ export const REAL_CORPUS_FIXTURES: RealCorpusExpectation[] = [
     expectedParserStrategy: 'xlsx',
     expectedDocType: 'questionnaire',
     expectedChunkingStrategy: 'row',
+    expectedEnrichLevel: 'L0',
+    expectedPromptVariant: 'row_rule',
+    expectedShouldCallLlm: false,
   },
   {
     id: 'cuad-label-report-xlsx',
@@ -67,6 +110,9 @@ export const REAL_CORPUS_FIXTURES: RealCorpusExpectation[] = [
     expectedParserStrategy: 'xlsx',
     expectedDocType: 'contract',
     expectedChunkingStrategy: 'row',
+    expectedEnrichLevel: 'L0',
+    expectedPromptVariant: 'row_rule',
+    expectedShouldCallLlm: false,
   },
   {
     id: 'cuad-collaboration-contract-pdf',
@@ -77,6 +123,9 @@ export const REAL_CORPUS_FIXTURES: RealCorpusExpectation[] = [
     expectedParserStrategy: 'pdf',
     expectedDocType: 'contract',
     expectedChunkingStrategy: 'clause',
+    expectedEnrichLevel: 'L2',
+    expectedPromptVariant: 'clause_l2',
+    expectedShouldCallLlm: true,
   },
   {
     id: 'cuad-promotion-contract-pdf',
@@ -87,6 +136,9 @@ export const REAL_CORPUS_FIXTURES: RealCorpusExpectation[] = [
     expectedParserStrategy: 'pdf',
     expectedDocType: 'contract',
     expectedChunkingStrategy: 'clause',
+    expectedEnrichLevel: 'L2',
+    expectedPromptVariant: 'clause_l2',
+    expectedShouldCallLlm: true,
   },
 ];
 

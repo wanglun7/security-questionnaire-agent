@@ -7,6 +7,10 @@ import {
 import { upsertDocument } from './documents';
 import { updateIngestionRunResult, upsertIngestionRun } from './ingestion-runs';
 import {
+  getEnrichmentCacheEntry,
+  upsertEnrichmentCacheEntry,
+} from './enrichment-cache';
+import {
   replaceReviewTasks,
   resolveReviewTasks as resolveTasks,
   upsertReviewTasks,
@@ -91,5 +95,11 @@ export const ingestionStorage: IngestionStorage = {
       docType: record.docType,
     });
     await upsertIngestionRun(record);
+  },
+  async getEnrichmentCacheEntry(cacheKey) {
+    return getEnrichmentCacheEntry(cacheKey);
+  },
+  async saveEnrichmentCacheEntry(entry) {
+    await upsertEnrichmentCacheEntry(entry);
   },
 };

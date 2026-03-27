@@ -1,6 +1,7 @@
 import type { ChunkContract, ChunkTaskContract } from '../contracts/chunk';
 import type { ChunkStrategyConfidence } from '../contracts/decision';
 import type { DocumentContract } from '../contracts/document';
+import type { ChunkEnrichmentRuntime } from '../contracts/enrichment';
 import type { ReviewTaskContract, ValidationIssueContract } from '../contracts/review';
 import type { SectionContract } from '../contracts/section';
 import type { StepTraceContract } from '../contracts/trace';
@@ -71,7 +72,7 @@ export type IngestionState = {
     approvedChunks?: number;
     rejectedChunks?: number;
     indexedChunks?: number;
-  };
+  } & ChunkEnrichmentRuntime;
   trace?: StepTraceContract[];
   error?: {
     code: string;
