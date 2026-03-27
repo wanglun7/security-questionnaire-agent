@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test:backend": "tsc -p tsconfig.test.json && node --test .test-dist/tests/backend/**/*.test.js",
+    "test:backend:corpus": "tsc -p tsconfig.test.json && node --test .test-dist/tests/backend/ingestion/real-corpus-regression.test.js",
+    "test:backend:live-llm": "tsc -p tsconfig.test.json && INGESTION_LIVE_LLM_TESTS=1 node --test .test-dist/tests/backend/ingestion/live-llm-corpus.test.js",
     "build:scripts": "tsc -p tsconfig.scripts.json",
     "ingestion:smoke": "npm run build:scripts && node .script-dist/scripts/run-ingestion-smoke.js"
   },

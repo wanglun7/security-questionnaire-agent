@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { pgTable, uuid, text, timestamp, integer, vector, boolean, jsonb } from 'drizzle-orm/pg-core';
 
 export const projects = pgTable('projects', {
@@ -72,7 +73,12 @@ export const documentSections = pgTable('document_sections', {
 export const knowledgeChunks = pgTable('knowledge_chunks', {
   id: uuid('id').primaryKey().defaultRandom(),
   documentId: uuid('document_id').references(() => documents.id).notNull(),
+  chunkIndex: integer('chunk_index'),
+  content: text('content'),
+  citationLabel: text('citation_label'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
   sectionId: uuid('section_id').references(() => documentSections.id),
+  tenant: text('tenant').notNull().default('default'),
   rawTextRef: text('raw_text_ref').notNull(),
   cleanText: text('clean_text').notNull(),
   contextualText: text('contextual_text'),
@@ -83,6 +89,12 @@ export const knowledgeChunks = pgTable('knowledge_chunks', {
   questionsAnsweredJson: jsonb('questions_answered_json'),
   chunkStrategy: text('chunk_strategy').notNull(),
   spanJson: jsonb('span_json').notNull(),
+  indexStatus: text('index_status').notNull().default('pending'),
+  checksum: text('checksum'),
+  effectiveDate: text('effective_date'),
+  version: text('version'),
+  authorityLevel: text('authority_level'),
+  aclTagsJson: jsonb('acl_tags_json').notNull().default(sql`'[]'::jsonb`),
   authorityGuess: text('authority_guess'),
   reviewStatus: text('review_status').notNull(),
   embedding: vector('embedding', { dimensions: 1024 }),
@@ -117,11 +129,19 @@ export const reviewTasks = pgTable('review_tasks', {
   id: uuid('id').primaryKey().defaultRandom(),
   ingestionRunId: uuid('ingestion_run_id').references(() => ingestionRuns.id).notNull(),
   documentId: uuid('document_id').references(() => documents.id).notNull(),
+  taskType: text('task_type'),
+  reasonCodesJson: jsonb('reason_codes_json').notNull().default(sql`'[]'::jsonb`),
+  targetChunkIdsJson: jsonb('target_chunk_ids_json').notNull().default(sql`'[]'::jsonb`),
+  targetDocumentId: uuid('target_document_id'),
+  assignee: text('assignee'),
+  owner: text('owner'),
   scope: text('scope').notNull(),
   scopeRefId: uuid('scope_ref_id'),
   reasonCode: text('reason_code').notNull(),
   summary: text('summary').notNull(),
   status: text('status').notNull().default('pending'),
+  resolutionType: text('resolution_type'),
   resolutionJson: jsonb('resolution_json'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  resolvedAt: timestamp('resolved_at'),
 });

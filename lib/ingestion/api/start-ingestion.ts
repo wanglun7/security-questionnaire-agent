@@ -1,6 +1,9 @@
 import { randomUUID } from 'node:crypto';
 
 import { createIngestionGraph } from '../graph/builder';
+import { createGptStructuredDecisionProvider } from '../services/llm-decision-provider';
+
+const INGESTION_GRAPH_RECURSION_LIMIT = 4096;
 
 type StartIngestionInput = {
   documentId: string;
@@ -17,7 +20,11 @@ export async function startIngestion(
   }
 ) {
   const ingestionId = options?.idFactory?.() ?? randomUUID();
-  const graph = options?.graph ?? (await createIngestionGraph());
+  const graph =
+    options?.graph ??
+    (await createIngestionGraph({
+      decisionProvider: createGptStructuredDecisionProvider(),
+    }));
 
   const result = await graph.invoke(
     {
@@ -29,6 +36,7 @@ export async function startIngestion(
       configurable: {
         thread_id: ingestionId,
       },
+      recursionLimit: INGESTION_GRAPH_RECURSION_LIMIT,
     }
   );
 

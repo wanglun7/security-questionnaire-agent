@@ -1,53 +1,38 @@
+import type { ChunkStrategy } from '../contracts/chunk';
+import type { ParserStrategy } from './parser-router';
+import type { IngestionDecisionProvider } from './llm-decision-provider';
+import type { SectionContract } from '../contracts/section';
+
 export type DocumentClassificationInput = {
+  parserStrategy: ParserStrategy;
   mimeType: string;
   originalFilename: string;
   previewText?: string;
+  sectionCount?: number;
+  sampledSectionCount?: number;
+  sections: Array<Pick<SectionContract, 'kind' | 'textRef'>>;
 };
 
 export type DocumentClassificationResult = {
   docType: 'faq' | 'policy' | 'contract' | 'questionnaire' | 'product_doc';
-  parserStrategy: 'pdf' | 'docx' | 'xlsx' | 'html';
-  chunkingStrategy: 'section' | 'faq' | 'clause' | 'row';
+  initialChunkingHypothesis: ChunkStrategy;
   priorityFeatures: string[];
 };
 
 export async function classifyDocument(
-  input: DocumentClassificationInput
+  input: DocumentClassificationInput,
+  options?: {
+    provider?: Pick<IngestionDecisionProvider, 'classifyDocument'>;
+  }
 ): Promise<DocumentClassificationResult> {
-  const filename = input.originalFilename.toLowerCase();
-  const mimeType = input.mimeType.toLowerCase();
-
-  if (mimeType.includes('spreadsheet') || filename.endsWith('.xlsx')) {
-    return {
-      docType: 'questionnaire',
-      parserStrategy: 'xlsx',
-      chunkingStrategy: 'row',
-      priorityFeatures: ['table'],
-    };
+  if (!options?.provider?.classifyDocument) {
+    throw new Error('LLM decision provider is required for document classification');
   }
 
-  if (mimeType.includes('html') || filename.endsWith('.html') || filename.endsWith('.htm')) {
-    return {
-      docType: 'product_doc',
-      parserStrategy: 'html',
-      chunkingStrategy: 'section',
-      priorityFeatures: ['dom'],
-    };
+  const decision = await options.provider.classifyDocument(input);
+  if (!decision) {
+    throw new Error('LLM document classification returned no decision');
   }
 
-  if (mimeType.includes('wordprocessingml') || filename.endsWith('.docx')) {
-    return {
-      docType: 'policy',
-      parserStrategy: 'docx',
-      chunkingStrategy: 'section',
-      priorityFeatures: ['headings'],
-    };
-  }
-
-  return {
-    docType: 'policy',
-    parserStrategy: 'pdf',
-    chunkingStrategy: 'section',
-    priorityFeatures: ['pages'],
-  };
+  return decision;
 }

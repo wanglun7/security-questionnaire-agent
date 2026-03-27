@@ -1,3 +1,5 @@
+import type { ChunkStrategyConfidence } from './decision';
+
 export type DocumentContract = {
   documentId: string;
   sourceUri: string;
@@ -8,5 +10,6 @@ export type DocumentContract = {
   checksum?: string;
   pageCount?: number;
   sectionCount?: number;
+  chunkStrategyConfidence?: ChunkStrategyConfidence;
   createdAt?: string;
 };

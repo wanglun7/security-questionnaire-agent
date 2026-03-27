@@ -1,6 +1,9 @@
 import { Command } from '@langchain/langgraph';
 
 import { createIngestionGraph } from '../graph/builder';
+import { createGptStructuredDecisionProvider } from '../services/llm-decision-provider';
+
+const INGESTION_GRAPH_RECURSION_LIMIT = 4096;
 
 export async function resumeIngestion(
   ingestionId: string,
@@ -9,7 +12,11 @@ export async function resumeIngestion(
     graph?: Awaited<ReturnType<typeof createIngestionGraph>>;
   }
 ) {
-  const graph = options?.graph ?? (await createIngestionGraph());
+  const graph =
+    options?.graph ??
+    (await createIngestionGraph({
+      decisionProvider: createGptStructuredDecisionProvider(),
+    }));
 
   const result = await graph.invoke(
     new Command({
@@ -19,6 +26,7 @@ export async function resumeIngestion(
       configurable: {
         thread_id: ingestionId,
       },
+      recursionLimit: INGESTION_GRAPH_RECURSION_LIMIT,
     }
   );
 

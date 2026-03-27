@@ -1,4 +1,5 @@
 import { createIngestionGraph } from '../graph/builder';
+import { createGptStructuredDecisionProvider } from '../services/llm-decision-provider';
 
 export async function getIngestionState(
   ingestionId: string,
@@ -6,7 +7,11 @@ export async function getIngestionState(
     graph?: Awaited<ReturnType<typeof createIngestionGraph>>;
   }
 ) {
-  const graph = options?.graph ?? (await createIngestionGraph());
+  const graph =
+    options?.graph ??
+    (await createIngestionGraph({
+      decisionProvider: createGptStructuredDecisionProvider(),
+    }));
   const snapshot = await graph.getState({
     configurable: {
       thread_id: ingestionId,

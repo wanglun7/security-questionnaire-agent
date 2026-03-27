@@ -8,9 +8,13 @@ test('chunk contract contains review and span fields', () => {
   const chunk: ChunkContract = {
     chunkId: 'chunk_1',
     documentId: 'doc_1',
+    tenant: 'tenant-default',
     rawTextRef: 'blob://1',
     cleanText: 'hello',
+    aclTags: [],
+    checksum: 'checksum-1',
     reviewStatus: 'pending',
+    indexStatus: 'pending',
     chunkStrategy: 'section',
     span: {},
     metadataVersion: 1,
